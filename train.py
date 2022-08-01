@@ -17,8 +17,10 @@ from meldataset import MelDataset, mel_spectrogram, get_dataset_filelist
 from models import Generator, MultiPeriodDiscriminator, MultiScaleDiscriminator, feature_loss, generator_loss,\
     discriminator_loss
 from utils import plot_spectrogram, scan_checkpoint, load_checkpoint, save_checkpoint
+import wandb
 
 torch.backends.cudnn.benchmark = True
+wandb.init(project="shobdokutir", entity="itanveer")
 
 
 def train(rank, a, h):
@@ -178,10 +180,10 @@ def train(rank, a, h):
                                      'optim_g': optim_g.state_dict(), 'optim_d': optim_d.state_dict(), 'steps': steps,
                                      'epoch': epoch})
 
-                # Tensorboard summary logging
-                # if steps % a.summary_interval == 0:
-                    # sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
-                    # sw.add_scalar("training/mel_spec_error", mel_error, steps)
+                # wandb summary logging
+                if steps % a.summary_interval == 0:
+                    wandb.log({"training/gen_loss_total": loss_gen_all,
+                              "training/mel_spec_error": mel_error}, step=steps)
 
                 # Validation
                 if steps % a.validation_interval == 0:  # and steps != 0:
@@ -199,20 +201,24 @@ def train(rank, a, h):
                             val_err_tot += F.l1_loss(y_mel, y_g_hat_mel).item()
 
                             if j <= 4:
-                                # if steps == 0:
-                                    # sw.add_audio('gt/y_{}'.format(j), y[0], steps, h.sampling_rate)
-                                    # sw.add_figure('gt/y_spec_{}'.format(j), plot_spectrogram(x[0]), steps)
-
-                                # sw.add_audio('generated/y_hat_{}'.format(j), y_g_hat[0], steps, h.sampling_rate)
+                                if steps == 0:
+                                    wandb.log({'gt/y_spec_{}'.format(j): plot_spectrogram(x[0])}, step=steps)
+                                    # wandb.log({'gt/y_{}'.format(j): 
+                                    #            wandb.Audio(y[0].cpu(), 
+                                    #                        sample_rate = h.sampling_rate)}, 
+                                    #           step=steps)
+                                # wandb.log({'generated/y_hat_{}'.format(j): wandb.Audio(y_g_hat[0].cpu(), 
+                                #                        sample_rate=h.sampling_rate)
+                                #           }, step = steps)
                                 y_hat_spec = mel_spectrogram(y_g_hat.squeeze(1), h.n_fft, h.num_mels,
                                                              h.sampling_rate, h.hop_size, h.win_size,
                                                              h.fmin, h.fmax)
-                                # sw.add_figure('generated/y_hat_spec_{}'.format(j),
-                                              # plot_spectrogram(y_hat_spec.squeeze(0).cpu().numpy()), steps)
-
+                                wandb.log({'generated/y_hat_spec_{}'.format(j): plot_spectrogram(
+                                    y_hat_spec.squeeze(0).cpu().numpy()
+                                )
+                                          }, step=steps)
                         val_err = val_err_tot / (j+1)
-                        # sw.add_scalar("validation/mel_spec_error", val_err, steps)
-
+                        wandb.log({"validation/mel_spec_error": val_err}, step=steps)
                     generator.train()
 
             steps += 1
