@@ -7,7 +7,7 @@ import argparse
 import json
 import torch
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DistributedSampler, DataLoader
 import torch.multiprocessing as mp
 from torch.distributed import init_process_group
@@ -97,7 +97,7 @@ def train(rank, a, h):
                                        pin_memory=True,
                                        drop_last=True)
 
-        sw = SummaryWriter(os.path.join(a.checkpoint_path, 'logs'))
+        # # sw = SummaryWriter(os.path.join(a.checkpoint_path, 'logs'))
 
     generator.train()
     mpd.train()
@@ -179,9 +179,9 @@ def train(rank, a, h):
                                      'epoch': epoch})
 
                 # Tensorboard summary logging
-                if steps % a.summary_interval == 0:
-                    sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
-                    sw.add_scalar("training/mel_spec_error", mel_error, steps)
+                # if steps % a.summary_interval == 0:
+                    # sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
+                    # sw.add_scalar("training/mel_spec_error", mel_error, steps)
 
                 # Validation
                 if steps % a.validation_interval == 0:  # and steps != 0:
@@ -199,19 +199,19 @@ def train(rank, a, h):
                             val_err_tot += F.l1_loss(y_mel, y_g_hat_mel).item()
 
                             if j <= 4:
-                                if steps == 0:
-                                    sw.add_audio('gt/y_{}'.format(j), y[0], steps, h.sampling_rate)
-                                    sw.add_figure('gt/y_spec_{}'.format(j), plot_spectrogram(x[0]), steps)
+                                # if steps == 0:
+                                    # sw.add_audio('gt/y_{}'.format(j), y[0], steps, h.sampling_rate)
+                                    # sw.add_figure('gt/y_spec_{}'.format(j), plot_spectrogram(x[0]), steps)
 
-                                sw.add_audio('generated/y_hat_{}'.format(j), y_g_hat[0], steps, h.sampling_rate)
+                                # sw.add_audio('generated/y_hat_{}'.format(j), y_g_hat[0], steps, h.sampling_rate)
                                 y_hat_spec = mel_spectrogram(y_g_hat.squeeze(1), h.n_fft, h.num_mels,
                                                              h.sampling_rate, h.hop_size, h.win_size,
                                                              h.fmin, h.fmax)
-                                sw.add_figure('generated/y_hat_spec_{}'.format(j),
-                                              plot_spectrogram(y_hat_spec.squeeze(0).cpu().numpy()), steps)
+                                # sw.add_figure('generated/y_hat_spec_{}'.format(j),
+                                              # plot_spectrogram(y_hat_spec.squeeze(0).cpu().numpy()), steps)
 
                         val_err = val_err_tot / (j+1)
-                        sw.add_scalar("validation/mel_spec_error", val_err, steps)
+                        # sw.add_scalar("validation/mel_spec_error", val_err, steps)
 
                     generator.train()
 
